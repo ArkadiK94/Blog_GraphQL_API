@@ -5,10 +5,11 @@ const path = require("path");
 const express = require("express");
 const multer = require("multer");
 const mongoose = require("mongoose");
+const {graphqlHTTP} = require("express-graphql");
 
-const feedRoutes = require("./routes/feed");
-const authRoutes = require("./routes/auth");
 const errorHandle = require("./util/error");
+const graphqlResolver = require("./graphql/resolvers");
+const graphqlSchema = require("./graphql/schema");
 
 const app = express();
 
@@ -38,15 +39,32 @@ app.use((req, res, next)=>{
   res.setHeader("Access-Control-Allow-Origin","*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if(req.method === "OPTIONS"){
+    return res.sendStatus(200);
+  }
   next();
 });
 
-app.use("/feed", feedRoutes);
-app.use("/auth", authRoutes);
+app.use("/graphql",graphqlHTTP({
+  schema: graphqlSchema,
+  rootValue: graphqlResolver,
+  graphiql: true,
+  customFormatErrorFn(err){
+    if(!err.originalError){
+      console.log(1);
+      return err;
+    }
+    const data = err.originalError.data;
+    const message = err.message || "An error occurred."
+    const code = err.originalError.status || 500;
+    return {message: message, data: data, status: code}
+  }
+}));
 
 app.use((req,res,next)=>{
   errorHandle.syncError("Page Not Found", 404);
 });
+
 
 app.use((err, req, res, next)=>{
   let statusCode = err.httpStatusCode;
@@ -58,11 +76,7 @@ app.use((err, req, res, next)=>{
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(()=>{
-    const server = app.listen(8080);
-    const io = require("./socket").init(server);
-    io.on("connection",()=>{
-      console.log("Client connected");
-    });
+    app.listen(8080);
   })
   .catch(err =>{
     errorHandle.syncError(err);
