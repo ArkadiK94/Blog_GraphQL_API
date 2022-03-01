@@ -3,7 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const User = require("../model/user");
-
+const Post = require("../model/post");
+// const isAuth = require("../middleware/is-auth");
 
 module.exports = {
   createUser: async function({userInput},req){
@@ -64,6 +65,39 @@ module.exports = {
         expiresIn: "1h"
       } 
     );
-    return{_id:user._id.toString(),token:token};
+    return{userId:user._id.toString(),token:token};
+  },
+  getPosts: async function(args,req){
+    const page = req.query.page;
+    const POSTS_PER_PAGE = 2;
+    const totalItems = await Post.find().countDocuments();
+    const posts = await Post.find().sort({createdAt:-1}).skip((page-1)*POSTS_PER_PAGE).limit(POSTS_PER_PAGE).populate("creator","name");
+    return{posts:posts, totalItems: totalItems}
+  },
+  createPost: async function({postInput}, req){
+    let {title,content} = postInput;
+    const errors = [];
+    title = validator.trim(title);
+    content = validator.trim(content);
+    if(!validator.isLength(title,{min:5}) || !validator.isLength(content,{min:5})){
+      errors.push("Invalid title or content");
+    }
+    if(errors.length>0){
+      const error = new Error("Invalid Input.");
+      error.status = 422
+      error.data = errors;
+      throw error;
+    }
+    const userId = "621e5fce6e567cd61cbfe9e6";
+    const user = await User.findById(userId);
+    if(!user){
+      throw new Error("This user is not exists");
+    }
+    const post = new Post({title:postInput.title, content:postInput.content, imageUrl:"fdsafsd", creator:user});
+    const createdPost = await post.save();
+    user.posts.push(createdPost._id);
+    await user.save();
+    console.log(createdPost.creator.name);
+    return {...createdPost._doc};
   }
 }
