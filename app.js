@@ -10,6 +10,7 @@ const {graphqlHTTP} = require("express-graphql");
 const errorHandle = require("./util/error");
 const graphqlResolver = require("./graphql/resolvers");
 const graphqlSchema = require("./graphql/schema");
+const auth = require('./middleware/auth');
 
 const app = express();
 
@@ -37,13 +38,15 @@ app.use("/images", express.static(path.join(__dirname,"images")));
 
 app.use((req, res, next)=>{
   res.setHeader("Access-Control-Allow-Origin","*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.setHeader("Access-Control-Allow-Methods", "POST");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if(req.method === "OPTIONS"){
     return res.sendStatus(200);
   }
   next();
 });
+
+app.use(auth);
 
 app.use("/graphql",graphqlHTTP({
   schema: graphqlSchema,

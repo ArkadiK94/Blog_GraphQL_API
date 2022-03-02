@@ -1,11 +1,10 @@
 const jwt = require("jsonwebtoken");
 
-const errorHandle = require("../util/error");
-
 module.exports = (req, res, next)=>{
   const authHeader = req.get("Authorization");
   if(!authHeader){
-    errorHandle.syncError("Not Authorized",401);
+    req.isAuth = false;
+    return next();
   }
   const token = authHeader.split(" ")[1];
   let decodedToken;
@@ -13,11 +12,14 @@ module.exports = (req, res, next)=>{
     decodedToken = jwt.verify(token,`${process.env.SECRET_FOR_TOKEN}`);
   }
   catch(err){
-    errorHandle.syncError(err);
+    req.isAuth = false;
+    return next();
   }
   if(!decodedToken){
-    errorHandle.syncError("Not Authorized",401);
+    req.isAuth = false;
+    return next();
   }
   req.userId = decodedToken.userId;
+  req.isAuth = true;
   next();
 }

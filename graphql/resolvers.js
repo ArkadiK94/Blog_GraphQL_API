@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../model/user");
 const Post = require("../model/post");
-// const isAuth = require("../middleware/is-auth");
 
 module.exports = {
   createUser: async function({userInput},req){
@@ -67,20 +66,41 @@ module.exports = {
     );
     return{userId:user._id.toString(),token:token};
   },
-  getPosts: async function(args,req){
-    const page = req.query.page;
+  getPosts: async function({page},req){
+    if(!req.isAuth){
+      const error = new Error("Not Authenticated");
+      error.status = 401;
+      throw error;
+    }
+    if(!page){
+      page = 1;
+    }
     const POSTS_PER_PAGE = 2;
     const totalItems = await Post.find().countDocuments();
     const posts = await Post.find().sort({createdAt:-1}).skip((page-1)*POSTS_PER_PAGE).limit(POSTS_PER_PAGE).populate("creator","name");
-    return{posts:posts, totalItems: totalItems}
+
+    const changedPosts = posts.map(post=>{
+      return{
+        ...post._doc,
+        _id: post._id.toString(), 
+        createdAt: post.createdAt.toISOString(), 
+        updatedAt: post.updatedAt.toISOString(),
+      }
+    });
+    return{posts:changedPosts, totalItems: totalItems}
   },
   createPost: async function({postInput}, req){
+    if(!req.isAuth){
+      const error = new Error("Not Authenticated");
+      error.status = 401;
+      throw error;
+    }
     let {title,content} = postInput;
     const errors = [];
     title = validator.trim(title);
     content = validator.trim(content);
     if(!validator.isLength(title,{min:5}) || !validator.isLength(content,{min:5})){
-      errors.push("Invalid title or content");
+      errors.push({message:"Invalid title or content"});
     }
     if(errors.length>0){
       const error = new Error("Invalid Input.");
@@ -88,8 +108,7 @@ module.exports = {
       error.data = errors;
       throw error;
     }
-    const userId = "621e5fce6e567cd61cbfe9e6";
-    const user = await User.findById(userId);
+    const user = await User.findById(req.userId);
     if(!user){
       throw new Error("This user is not exists");
     }
@@ -97,7 +116,11 @@ module.exports = {
     const createdPost = await post.save();
     user.posts.push(createdPost._id);
     await user.save();
-    console.log(createdPost.creator.name);
-    return {...createdPost._doc};
+    return {
+      ...createdPost._doc, 
+      _id: createdPost._id.toString(), 
+      createdAt: createdPost.createdAt.toISOString(), 
+      updatedAt: createdPost.updatedAt.toISOString() 
+    };
   }
 }
