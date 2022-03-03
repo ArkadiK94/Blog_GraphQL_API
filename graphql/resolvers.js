@@ -112,7 +112,7 @@ module.exports = {
     if(!user){
       throw new Error("This user is not exists");
     }
-    const post = new Post({title:postInput.title, content:postInput.content, imageUrl:"fdsafsd", creator:user});
+    const post = new Post({title:postInput.title, content:postInput.content, imageUrl:postInput.imageUrl, creator:user});
     const createdPost = await post.save();
     user.posts.push(createdPost._id);
     await user.save();
@@ -121,6 +121,19 @@ module.exports = {
       _id: createdPost._id.toString(), 
       createdAt: createdPost.createdAt.toISOString(), 
       updatedAt: createdPost.updatedAt.toISOString() 
+    };
+  },
+  getPost: async function({postId}, req){
+    if(!req.isAuth){
+      const error = new Error("Not Authenticated");
+      error.status = 401;
+      throw error;
+    }
+    const post = await Post.findById(postId).populate("creator","name");
+    return {
+      ...post._doc, _id: post._id.toString(), 
+      updatedAt: post.updatedAt.toISOString(), 
+      createdAt: post.createdAt.toISOString()
     };
   }
 }

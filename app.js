@@ -8,6 +8,7 @@ const mongoose = require("mongoose");
 const {graphqlHTTP} = require("express-graphql");
 
 const errorHandle = require("./util/error");
+const deleteFile = require("./util/file").deleteFile;
 const graphqlResolver = require("./graphql/resolvers");
 const graphqlSchema = require("./graphql/schema");
 const auth = require('./middleware/auth');
@@ -38,7 +39,7 @@ app.use("/images", express.static(path.join(__dirname,"images")));
 
 app.use((req, res, next)=>{
   res.setHeader("Access-Control-Allow-Origin","*");
-  res.setHeader("Access-Control-Allow-Methods", "POST");
+  res.setHeader("Access-Control-Allow-Methods", "POST,PUT");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if(req.method === "OPTIONS"){
     return res.sendStatus(200);
@@ -47,6 +48,21 @@ app.use((req, res, next)=>{
 });
 
 app.use(auth);
+
+app.put("/post-image",(req, res, next)=>{
+  if(!req.isAuth){
+    const error = new Error("Not Authenticated");
+    error.status = 401;
+    throw error;
+  }
+  if(!req.file){
+    return res.status(200).json({message:"Image was not provided"})
+  }
+  if(req.body.oldPath){
+    deleteFile(req.body.oldPath);
+  }
+  return res.status(201).json({message:"Image was stored", filePath:req.file.path.replace(/\\/,"/")});
+});
 
 app.use("/graphql",graphqlHTTP({
   schema: graphqlSchema,
