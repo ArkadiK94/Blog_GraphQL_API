@@ -56,7 +56,11 @@ app.put("/post-image",(req, res, next)=>{
     throw error;
   }
   if(!req.file){
-    return res.status(200).json({message:"Image was not provided"})
+    let imagePath;
+    if(req.body.oldPath){
+      imagePath = req.body.oldPath;
+    }
+    return res.status(200).json({message:"Image was not provided", filePath: imagePath});
   }
   if(req.body.oldPath){
     deleteFile(req.body.oldPath);

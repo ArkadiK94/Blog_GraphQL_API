@@ -77,7 +77,7 @@ module.exports = {
     }
     const POSTS_PER_PAGE = 2;
     const totalItems = await Post.find().countDocuments();
-    const posts = await Post.find().sort({createdAt:-1}).skip((page-1)*POSTS_PER_PAGE).limit(POSTS_PER_PAGE).populate("creator","name");
+    const posts = await Post.find().sort({createdAt:-1}).skip((page-1)*POSTS_PER_PAGE).limit(POSTS_PER_PAGE).populate("creator");
 
     const changedPosts = posts.map(post=>{
       return{
@@ -95,7 +95,7 @@ module.exports = {
       error.status = 401;
       throw error;
     }
-    let {title,content} = postInput;
+    let {title,content,imageUrl} = postInput;
     const errors = [];
     title = validator.trim(title);
     content = validator.trim(content);
@@ -112,7 +112,7 @@ module.exports = {
     if(!user){
       throw new Error("This user is not exists");
     }
-    const post = new Post({title:postInput.title, content:postInput.content, imageUrl:postInput.imageUrl, creator:user});
+    const post = new Post({title:title, content:content, imageUrl:imageUrl, creator:user});
     const createdPost = await post.save();
     user.posts.push(createdPost._id);
     await user.save();
@@ -129,11 +129,60 @@ module.exports = {
       error.status = 401;
       throw error;
     }
-    const post = await Post.findById(postId).populate("creator","name");
+    const post = await Post.findById(postId).populate("creator");
+    if(!post){
+      const error = new Error("Post not found");
+      error.status = 404;
+      throw error;
+    }
     return {
       ...post._doc, _id: post._id.toString(), 
       updatedAt: post.updatedAt.toISOString(), 
       createdAt: post.createdAt.toISOString()
     };
+  },
+  updatePost: async function({postId, postInput}, req){
+    if(!req.isAuth){
+      const error = new Error("Not Authenticated");
+      error.status = 401;
+      throw error;
+    }
+    const post = await Post.findById(postId).populate("creator");
+    if(!post){
+      const error = new Error("Post not found");
+      error.status = 404;
+      throw error;
+    }
+    if(post.creator._id.toString() !== req.userId.toString()){
+      const error = new Error("Not Authorized");
+      error.status = 403;
+      throw error;
+    }
+    let {title,content,imageUrl} = postInput;
+    const errors = [];
+    title = validator.trim(title);
+    content = validator.trim(content);
+    if(!validator.isLength(title,{min:5}) || !validator.isLength(content,{min:5})){
+      errors.push({message:"Invalid title or content"});
+    }
+    if(errors.length>0){
+      const error = new Error("Invalid Input.");
+      error.status = 422
+      error.data = errors;
+      throw error;
+    }
+    post.title = title;
+    post.content = content;
+    if(imageUrl){
+      post.imageUrl = imageUrl;
+    }
+    const updatedPost = await post.save();
+    return{
+      ...updatedPost._doc, 
+      _id: updatedPost._id.toString(), 
+      createdAt: updatedPost.createdAt.toISOString(), 
+      updatedAt: updatedPost.updatedAt.toISOString() 
+    }
+
   }
 }
