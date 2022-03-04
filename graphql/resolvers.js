@@ -198,7 +198,7 @@ module.exports = {
       error.status = 404;
       throw error;
     }
-    if(post.creator._id.toString() !== req.userId.toString()){
+    if(post.creator.toString() !== req.userId.toString()){
       const error = new Error("Not Authorized");
       error.status = 403;
       throw error;
@@ -213,6 +213,36 @@ module.exports = {
     deleteFile(deletedPost.imageUrl);
     user.posts.pull(deletedPost._id);
     await user.save();
-    return{deleted:true};
+    return true;
+  },
+  getStatus: async function(args, req){
+    if(!req.isAuth){
+      const error = new Error("Not Authenticated");
+      error.status = 401;
+      throw error;
+    }
+    const user = await User.findById(req.userId);
+    if(!user){
+      const error = new Error("User not found");
+      error.status = 404;
+      throw error;
+    }
+    return user.status;
+  },
+  updateStatus: async function({newStatus}, req){
+    if(!req.isAuth){
+      const error = new Error("Not Authenticated");
+      error.status = 401;
+      throw error;
+    }
+    const user = await User.findById(req.userId);
+    if(!user){
+      const error = new Error("User not found");
+      error.status = 404;
+      throw error;
+    }
+    user.status = newStatus;
+    await user.save();
+    return true;
   }
 }
