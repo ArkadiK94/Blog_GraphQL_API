@@ -1,4 +1,4 @@
-# Blog_GraphQL_API
+# Blog_Server_GraphQL_API
 
 ### Project that I did due to a Udemy Course that I took. The name of the course "NodeJS - The Complete Guide (MVC, REST APIs, GraphQL, Deno)".
 
@@ -13,4 +13,4 @@ Important features from NodeJS and other used libraries:
 1. Using GraphQL Queries 
 2. Using GraphQL schema and resolvers
 
-* Using the API with Blog app which was build with ReactJS (the frontend was not added to github)
+* Using the server with Blog app which was build with ReactJS (the frontend was not added to github)
