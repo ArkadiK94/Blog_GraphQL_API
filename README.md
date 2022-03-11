@@ -13,5 +13,4 @@ Important features from NodeJS and other used libraries:
 1. Using GraphQL Queries 
 2. Using GraphQL schema and resolvers
 
-
-* connecting the graphql api with react frontend app and managing there the connection (the frontend was not added to github)
+* Using the API with Blog app which was build with ReactJS (the frontend was not added to github)
